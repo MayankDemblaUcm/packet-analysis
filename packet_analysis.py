@@ -8,6 +8,7 @@ import numpy as np
 import math
 import socket
 
+
 # Function to get geolocation data
 def get_geolocation(ip_address):
     try:
@@ -16,6 +17,7 @@ def get_geolocation(ip_address):
         return data.get('country', 'Unknown'), data.get('region', 'Unknown'), data.get('city', 'Unknown')
     except:
         return 'Unknown', 'Unknown', 'Unknown'
+
 
 # Dictionary to store flow data
 flow_data = {}
@@ -39,6 +41,7 @@ with open(csv_file, mode='w', newline='') as file:
     writer = csv.writer(file)
     writer.writerow(csv_fields)  # Write header row
 
+
     def calculate_entropy(packet_sizes):
         """
         Calculate the entropy of a list of packet sizes.
@@ -49,8 +52,9 @@ with open(csv_file, mode='w', newline='') as file:
         size_counts = defaultdict(int)
         for size in packet_sizes:
             size_counts[size] += 1
-        entropy = -sum((count/packet_count) * math.log2(count/packet_count) for count in size_counts.values())
+        entropy = -sum((count / packet_count) * math.log2(count / packet_count) for count in size_counts.values())
         return entropy
+
 
     def get_protocol(packet):
         """
@@ -69,6 +73,7 @@ with open(csv_file, mode='w', newline='') as file:
             return socket.gethostbyaddr(ip)[0]
         except socket.herror:
             return None
+
 
     def packet_callback(packet):
         if packet.haslayer(IP):
@@ -183,6 +188,6 @@ with open(csv_file, mode='w', newline='') as file:
             print(f"Geolocation: {country}, {region}, {city}")
             print(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(current_time))}\n")
 
+
     # Start sniffing
     sniff(prn=packet_callback, store=False)
-
