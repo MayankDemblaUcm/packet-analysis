@@ -1,7 +1,3 @@
-Here's the README content formatted for `README.md`:
-
----
-
 # Tracking Human Behavior Using Network Packet Headers
 
 This repository focuses on analyzing network traffic data to track and infer human behavior patterns. By leveraging packet headers and various network-level metrics, the project explores how users interact with networks and aims to uncover underlying behaviors based on network packet analysis.
