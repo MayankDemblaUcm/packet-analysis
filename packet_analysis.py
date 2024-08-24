@@ -79,8 +79,22 @@ with open(csv_file, mode='w', newline='') as file:
         if packet.haslayer(IP):
             ip_layer = packet[IP]
             protocol = get_protocol(packet)
-            src_port = packet[TCP].sport if protocol == 'TCP' else packet[UDP].sport
-            dst_port = packet[TCP].dport if protocol == 'TCP' else packet[UDP].dport
+
+            # Initialize source and destination ports
+            src_port = dst_port = None
+
+            # Check for TCP or UDP layer
+            if protocol == 'TCP' and packet.haslayer(TCP):
+                src_port = packet[TCP].sport
+                dst_port = packet[TCP].dport
+            elif protocol == 'UDP' and packet.haslayer(UDP):
+                src_port = packet[UDP].sport
+                dst_port = packet[UDP].dport
+
+            # If ports are not available, skip processing
+            if src_port is None or dst_port is None:
+                return
+
             flow_key = (ip_layer.src, ip_layer.dst, src_port, dst_port)
 
             current_time = time.time()
