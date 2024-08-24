@@ -1,5 +1,7 @@
 import csv
 import time
+from ipaddress import ip_address, ip_network
+
 import requests
 from scapy.all import sniff
 from scapy.layers.inet import IP, TCP, UDP
@@ -24,6 +26,9 @@ flow_data = {}
 
 # Dictionary to store session data
 session_data = defaultdict(lambda: {"packets": [], "start_time": None, "end_time": None})
+
+# network range
+network = ip_network('192.168.1.0/24')
 
 # CSV file setup
 csv_file = 'network_traffic.csv'
@@ -73,6 +78,15 @@ with open(csv_file, mode='w', newline='') as file:
             return socket.gethostbyaddr(ip)[0]
         except socket.herror:
             return None
+
+    def determine_flow_direction(src_ip, dst_ip):
+        src_ip_addr = ip_address(src_ip)
+        dst_ip_addr = ip_address(dst_ip)
+
+        if src_ip_addr in network:
+            return "outbound" if dst_ip_addr not in network else "internal"
+        else:
+            return "inbound" if dst_ip_addr in network else "external"
 
 
     def packet_callback(packet):
@@ -132,7 +146,7 @@ with open(csv_file, mode='w', newline='') as file:
             entropy = calculate_entropy(flow_data[flow_key]["packet_sizes"])
 
             # Flow direction
-            flow_direction = "outbound" if ip_layer.src == packet[IP].src else "inbound"
+            flow_direction = determine_flow_direction(ip_layer.src, ip_layer.dst)
 
             # Session metrics
             session_duration = session_data[flow_key]["end_time"] - session_data[flow_key]["start_time"]
