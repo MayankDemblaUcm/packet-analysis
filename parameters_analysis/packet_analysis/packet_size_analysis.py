@@ -1,9 +1,12 @@
 import os
+import socket
 
 import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
+from matplotlib import pyplot as plt
+from plotly.subplots import make_subplots
 import seaborn as sns
-import matplotlib.pyplot as plt
 
 # Load the data from the CSV file
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -16,37 +19,68 @@ print(df['packet_size'].describe())
 # Check for missing values in packet size
 print(df['packet_size'].isnull().sum())
 
-# Set visualization style
-sns.set(style="whitegrid")
+# Calculate header size
+df['header_size'] = df['packet_size'] - df['payload_size']
 
-# Plot the distribution of packet sizes
-plt.figure(figsize=(10, 6))
-sns.histplot(df['packet_size'], kde=True, bins=50)
-plt.title('Distribution of Packet Sizes')
-plt.xlabel('Packet Size (Bytes)')
-plt.ylabel('Frequency')
-plt.show()
+# Create subplots
+fig = make_subplots(rows=3, cols=1, subplot_titles=('Total Packet Size', 'Payload Size', 'Header Size'))
 
-###
-ax = sns.histplot(df['packet_size'], bins=30, kde=True)
+# Plot Total Packet Size distribution
+total_trace = go.Histogram(
+    x=df['packet_size'],
+    nbinsx=30,
+    name='Total Packet Size',
+    marker_color='blue',
+    opacity=0.6,
+    hovertemplate="Packet Size: %{x}<br>Frequency: %{y}<extra></extra>"
+)
+fig.add_trace(total_trace, row=1, col=1)
 
-# Get the x and y values for the KDE line
-kde_x = np.linspace(df['packet_size'].min(), df['packet_size'].max(), 100)
-kde_y = sns.kdeplot(df['packet_size'], bw_adjust=1).get_lines()[0].get_ydata()
+# Plot Payload Size distribution
+payload_trace = go.Histogram(
+    x=df['payload_size'],
+    nbinsx=30,
+    name='Payload Size',
+    marker_color='green',
+    opacity=0.6,
+    hovertemplate="Payload Size: %{x}<br>Frequency: %{y}<extra></extra>"
+)
+fig.add_trace(payload_trace, row=2, col=1)
 
-# Annotate the KDE line with frequency values
-for i in range(0, len(kde_x), 5):  # Adjust step (5) to control the number of annotations
-    plt.annotate(f'{kde_y[i]:.2f}', xy=(kde_x[i], kde_y[i]), xytext=(0, 5),
-                 textcoords='offset points', ha='center', fontsize=8, color='blue')
+# Plot Header Size distribution
+header_trace = go.Histogram(
+    x=df['header_size'],
+    nbinsx=30,
+    name='Header Size',
+    marker_color='orange',
+    opacity=0.6,
+    hovertemplate="Header Size: %{x}<br>Frequency: %{y}<extra></extra>"
+)
+fig.add_trace(header_trace, row=3, col=1)
 
-plt.title('Packet Size Distribution with Frequency Annotations')
-plt.xlabel('Packet Size (bytes)')
-plt.ylabel('Frequency')
-plt.show()
+# Update x-axes to show every packet size without gaps
+fig.update_xaxes(tickmode='linear', dtick=100, title_text="Size (bytes)")
 
-###
+# Customize layout for better readability
+fig.update_layout(
+    height=900,
+    width=800,
+    title_text="Packet Size, Payload Size, and Header Size Distributions",
+    showlegend=False
+)
 
-# Assuming you have a timestamp column
+
+# Update y-axes to show frequency
+fig.update_yaxes(title_text="Frequency")
+
+# Save the figure as an HTML file
+fig.write_html("packet_size_distribution.html")
+
+# Show the figure
+fig.show()
+
+#####
+
 df['temporal_patterns'] = pd.to_datetime(df['temporal_patterns'])
 
 # Plot packet sizes over time
@@ -55,13 +89,6 @@ sns.lineplot(x='temporal_patterns', y='packet_size', data=df)
 plt.title('Packet Sizes Over Time')
 plt.xlabel('Timestamp')
 plt.ylabel('Packet Size (Bytes)')
-plt.show()
-
-# Plot a boxplot of packet sizes to detect outliers
-plt.figure(figsize=(10, 6))
-sns.boxplot(x='packet_size', data=df)
-plt.title('Box Plot of Packet Sizes')
-plt.xlabel('Packet Size (Bytes)')
 plt.show()
 
 # Scatter plot of packet size vs. source port
@@ -80,27 +107,117 @@ plt.xlabel('Destination Port')
 plt.ylabel('Packet Size (Bytes)')
 plt.show()
 
-# Density plot of packet sizes
-plt.figure(figsize=(10, 6))
-sns.kdeplot(df['packet_size'], shade=True)
-plt.title('Density Plot of Packet Sizes')
-plt.xlabel('Packet Size (Bytes)')
-plt.ylabel('Density')
-plt.show()
+#### ============================== Final with TimeLine ============================
 
-# Calculate z-scores for packet size
-df['z_score'] = (df['packet_size'] - df['packet_size'].mean()) / df['packet_size'].std()
 
-# Flag anomalies (e.g., z-score > 3 or < -3)
-anomalies = df[(df['z_score'] > 3) | (df['z_score'] < -3)]
-print("Anomalous Packets Detected:")
-print(anomalies[['temporal_patterns', 'source_ip', 'destination_ip', 'packet_size', 'protocol']])
+def get_domain(ip):
+    try:
+        domain = socket.gethostbyaddr(ip)[0]
+    except socket.herror:
+        domain = "Unknown"
+    return domain
 
-# Visualize the anomalies
-plt.figure(figsize=(14, 7))
-sns.scatterplot(x='temporal_patterns', y='packet_size', data=df, hue=(df['z_score'].abs() > 3), palette={False: 'blue', True: 'red'})
-plt.title('Packet Sizes Over Time with Anomalies Highlighted')
-plt.xlabel('Timestamp')
-plt.ylabel('Packet Size (Bytes)')
-plt.show()
+# Apply this function to your dataframe
+df['source_domain'] = df['source_ip'].apply(get_domain)
+df['destination_domain'] = df['destination_ip'].apply(get_domain)
 
+# Ensure temporal patterns are in datetime format if not already
+df['temporal_patterns'] = pd.to_datetime(df['temporal_patterns'])
+
+# Calculate header size
+df['header_size'] = df['packet_size'] - df['payload_size']
+
+# Define thresholds for anomaly detection (example values)
+anomaly_thresholds = {
+    'TCP': {'min_payload': 40, 'max_payload': 1500, 'min_header': 10, 'max_header': 60},
+    'UDP': {'min_payload': 50, 'max_payload': 1500, 'min_header': 8, 'max_header': 60}
+}
+
+# Define colors for different protocols and data types
+protocol_colors = {
+    'TCP': {'payload': 'green', 'header': 'grey', 'anomaly_payload': '#ADD8E6', 'anomaly_header': '#E0FFFF'},
+    'UDP': {'payload': 'red', 'header': 'black', 'anomaly_payload': '#90EE90', 'anomaly_header': '#FFDAB9'}
+}
+
+# Plotting using Plotly for interactive HTML output
+fig = go.Figure()
+
+# Add data points and highlight anomalies
+for protocol in df['protocol'].unique():
+    protocol_data = df[df['protocol'] == protocol]
+
+    # Plot Payload Sizes
+    fig.add_trace(go.Scatter(
+        x=protocol_data['temporal_patterns'],
+        y=protocol_data['payload_size'],
+        mode='markers',
+        name=f'{protocol} Payload Size',
+        marker=dict(size=5, color=protocol_colors[protocol]['payload']),
+        text=protocol_data.apply(lambda
+                                     row: f"Size: {row['payload_size']} bytes (Payload)<br>Header Size: {row['header_size']} bytes<br>Protocol: {row['protocol']}<br>Source: {row['source_domain']}<br>Destination: {row['destination_domain']}",
+                                 axis=1),
+        hoverinfo='text'
+    ))
+
+    # Plot Header Sizes
+    fig.add_trace(go.Scatter(
+        x=protocol_data['temporal_patterns'],
+        y=protocol_data['header_size'],
+        mode='markers',
+        name=f'{protocol} Header Size',
+        marker=dict(size=5, color=protocol_colors[protocol]['header']),
+        text=protocol_data.apply(lambda
+                                     row: f"Size: {row['header_size']} bytes (Header)<br>Payload Size: {row['payload_size']} bytes<br>Protocol: {row['protocol']}<br>Source: {row['source_domain']}<br>Destination: {row['destination_domain']}",
+                                 axis=1),
+        hoverinfo='text'
+    ))
+
+    # Highlight anomalies
+    if protocol in anomaly_thresholds:
+        thresholds = anomaly_thresholds[protocol]
+        anomaly_data = protocol_data[
+            (protocol_data['payload_size'] < thresholds['min_payload']) |
+            (protocol_data['payload_size'] > thresholds['max_payload']) |
+            (protocol_data['header_size'] < thresholds['min_header']) |
+            (protocol_data['header_size'] > thresholds['max_header'])
+            ]
+
+        fig.add_trace(go.Scatter(
+            x=anomaly_data['temporal_patterns'],
+            y=anomaly_data['payload_size'],
+            mode='markers',
+            name=f'{protocol} Anomalous Payload Size',
+            marker=dict(size=8, color=protocol_colors[protocol]['anomaly_payload']),
+            text=anomaly_data.apply(lambda
+                                        row: f"Size: {row['payload_size']} bytes (Payload)<br>Header Size: {row['header_size']} bytes<br>Protocol: {row['protocol']}<br>Source: {row['source_domain']}<br>Destination: {row['destination_domain']}",
+                                    axis=1),
+            hoverinfo='text'
+        ))
+
+        fig.add_trace(go.Scatter(
+            x=anomaly_data['temporal_patterns'],
+            y=anomaly_data['header_size'],
+            mode='markers',
+            name=f'{protocol} Anomalous Header Size',
+            marker=dict(size=8, color=protocol_colors[protocol]['anomaly_header']),
+            text=anomaly_data.apply(lambda
+                                        row: f"Size: {row['header_size']} bytes (Header)<br>Payload Size: {row['payload_size']} bytes<br>Protocol: {row['protocol']}<br>Source: {row['source_domain']}<br>Destination: {row['destination_domain']}",
+                                    axis=1),
+            hoverinfo='text'
+        ))
+
+# Update layout
+fig.update_layout(
+    title='Packet Sizes Over Time with Anomaly Detection',
+    xaxis_title='Time',
+    yaxis_title='Size (bytes)',
+    legend_title='Legend',
+    xaxis_rangeslider_visible=True
+)
+
+# Save as HTML
+html_path = 'packet_size_anomaly_detection.html'
+fig.write_html(html_path)
+
+# Optionally show the plot in a notebook or other environment
+fig.show()
