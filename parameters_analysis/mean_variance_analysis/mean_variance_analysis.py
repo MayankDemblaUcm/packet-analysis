@@ -1,6 +1,5 @@
 import os
 import socket
-
 import pandas as pd
 import plotly.graph_objects as go
 
@@ -21,7 +20,8 @@ flows = df.groupby(['source_ip', 'destination_ip']).agg({
     'total_packets': 'sum',
     'packet_size': list,
     'inter_arrival_time': list,
-    'temporal_patterns': list
+    'temporal_patterns': list,
+    'session_count' : list
 }).reset_index()
 
 # Create the table
@@ -29,15 +29,16 @@ table_data = []
 
 for index, row in flows.iterrows():
     packet_details = "<br>".join([
-        f"Mean size: {size} bytes, Flow time: {time} ms, total packets: {row['total_packets']}, time: {timestamp}"
-        for size, time, timestamp in zip(row['packet_size'], row['inter_arrival_time'], row['temporal_patterns'])
+        f"Time: {timestamp} <br>Mean size: {size} bytes, Flow time: {time} ms, Session packets: {sessioncount} <br>"
+        for size, sessioncount,  time, timestamp in zip(row['packet_size'], row['session_count'], row['inter_arrival_time'], row['temporal_patterns'])
     ])
 
+    # Appending a combination of grouped total packets and individual packet details
     table_data.append([
         row['source_ip'] + '<br>(' + get_domain(row['source_ip']) +  ')',
         row['destination_ip'] + '<br>(' + get_domain(row['destination_ip']) +  ')',
-        row['total_packets'],
-        packet_details
+        row['total_packets'],  # Sum of total packets
+        packet_details  # Details of individual packets
     ])
 
 fig = go.Figure(data=[go.Table(
@@ -61,9 +62,14 @@ fig = go.Figure(data=[go.Table(
 
 # Update layout to make it scrollable and fit text
 fig.update_layout(
-    title="Scrollable Network Flow Table with Resized Columns",
-    height=800,  # Adjust height to enable scrolling
+    title="Network Flow Table with Packet Details",
+    height=500,  # Adjust height to enable scrolling
     margin=dict(l=0, r=0, t=30, b=0),
 )
+
+
+# Save as HTML
+html_path = 'flow_table.html'
+fig.write_html(html_path)
 
 fig.show()
