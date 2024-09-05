@@ -21,6 +21,9 @@ This repository focuses on analyzing network traffic data to track and infer hum
 
 Network packet headers contain critical information that can be analyzed to understand network traffic and user behaviors. This project utilizes Python to analyze network packets, focusing on various packet-level, flow-level, and session-level metrics. The ultimate goal is to infer behavioral patterns such as access habits, geolocation, and temporal activity patterns.
 
+
+![img.png](approach.png)
+
 ## Features
 
 - Analysis of unique source and destination IP addresses.
