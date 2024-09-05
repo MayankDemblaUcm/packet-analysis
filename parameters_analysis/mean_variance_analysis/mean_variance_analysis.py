@@ -2,6 +2,7 @@ import os
 import socket
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.express as px
 
 # Load the data from the CSV file
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -73,3 +74,24 @@ html_path = 'flow_table.html'
 fig.write_html(html_path)
 
 fig.show()
+
+
+################## ----- Mean and Variance Analysis --------------- ##############
+
+# Create a scatter plot
+fig = px.scatter(df,
+                 x='mean_packet_size',
+                 y='variance_packet_size',
+                 color='source_ip',  # Color by source IP to identify different flows
+                 hover_data=['source_ip', 'destination_ip', 'total_packets'],
+                 title="Mean Packet Size vs Variance Packet Size",
+                 labels={
+                     "mean_packet_size": "Mean Packet Size (bytes)",
+                     "variance_packet_size": "Variance in Packet Size"
+                 })
+
+# Save the plot as an HTML file
+html_path = 'mean_variance_visualization.html'
+fig.write_html(html_path)
+
+print(f"Plot saved as {html_path}")
