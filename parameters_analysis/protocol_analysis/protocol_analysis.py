@@ -1,11 +1,10 @@
 import os
+import socket
 
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.cluster import DBSCAN
-from sklearn.ensemble import IsolationForest
-from sklearn.preprocessing import StandardScaler
+import plotly.express as px
 
 # Load the data from the CSV file
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -32,46 +31,56 @@ plt.xlabel('Protocol')
 plt.ylabel('Count')
 plt.show()
 
-# Feature engineering: count unique protocols per source IP
-protocol_counts = df.groupby('source_ip')['protocol'].nunique().reset_index()
-protocol_counts.columns = ['source_ip', 'unique_protocol_count']
 
-# Merge with the original dataframe
-df = pd.merge(df, protocol_counts, on='source_ip')
+## ---------------------------------  HeatMap ----------------------- ###
 
-# Display the updated dataframe
-print(df.head())
+# Step 2: Prepare the data
+df_grouped = df.groupby(['source_ip', 'protocol', 'destination_ip']).size().reset_index(name='count')
 
-# Standardize the features for anomaly detection
-features = ['source_port', 'destination_port', 'unique_protocol_count']
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(df[features])
+# Step 3: Create a Sunburst chart
+fig = px.sunburst(
+    df_grouped,
+    path=['source_ip', 'protocol', 'destination_ip'],  # Hierarchical path
+    values='count',  # Size of each segment
+    color='protocol',  # Color by protocol
+    title="Network Traffic Visualization (Source IP → Protocol → Destination IP)"
+)
 
-# Apply Isolation Forest for anomaly detection
-isolation_forest = IsolationForest(contamination=0.01, random_state=42)
-df['anomaly_score'] = isolation_forest.fit_predict(X_scaled)
+# Step 4: Save as HTML
+fig.write_html("network_traffic_sunburst.html")
 
-# Plot the anomalies
-plt.figure(figsize=(10, 6))
-sns.scatterplot(x='source_port', y='destination_port', hue='anomaly_score', data=df, palette={-1: 'red', 1: 'blue'})
-plt.title('Anomaly Detection in Network Traffic')
-plt.xlabel('Source Port')
-plt.ylabel('Destination Port')
-plt.show()
+# Display the figure
+fig.show()
 
-# Apply DBSCAN for clustering
-dbscan = DBSCAN(eps=0.5, min_samples=5)
-df['cluster'] = dbscan.fit_predict(X_scaled)
 
-# Visualize the clustering
-plt.figure(figsize=(10, 6))
-sns.scatterplot(x='source_port', y='destination_port', hue='cluster', data=df, palette='Set1')
-plt.title('DBSCAN Clustering of Network Traffic')
-plt.xlabel('Source Port')
-plt.ylabel('Destination Port')
-plt.show()
+###### ------------ TreeMap ----------------------- ############
 
-# Analyze potential intrusions by filtering anomalies
-anomalies = df[df['anomaly_score'] == -1]
-print("Potential Intrusions Detected:")
-print(anomalies[['source_ip', 'destination_ip', 'protocol', 'source_port', 'destination_port']])
+# Step 2: Define the function to get domain names
+def get_domain(ip):
+    try:
+        domain = socket.gethostbyaddr(ip)[0]
+    except socket.herror:
+        domain = "Unknown"
+    return domain
+
+# Step 3: Replace IP addresses with domain names and include IP in brackets
+df['source_ip'] = df['source_ip'].apply(lambda ip: f"{get_domain(ip)} ({ip})")
+df['destination_ip'] = df['destination_ip'].apply(lambda ip: f"{get_domain(ip)} ({ip})")
+
+# Step 4: Prepare the data
+df_grouped = df.groupby(['source_ip', 'protocol', 'destination_ip']).size().reset_index(name='count')
+
+# Step 5: Create a Treemap
+fig = px.treemap(
+    df_grouped,
+    path=['source_ip', 'protocol', 'destination_ip'],  # Hierarchical path
+    values='count',  # Size of each rectangle
+    color='protocol',  # Color by protocol
+    title="Network Traffic Visualization (Source Domain → Protocol → Destination Domain)"
+)
+
+# Step 6: Save as HTML
+fig.write_html("network_traffic_treemap_with_dynamic_domains.html")
+
+# Display the figure
+fig.show()
