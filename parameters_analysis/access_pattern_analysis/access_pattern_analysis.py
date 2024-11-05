@@ -4,7 +4,7 @@ import plotly.express as px
 
 # Load the data from the CSV file
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-csv_path = os.path.join(root_dir, 'network_traffic ucm.csv')
+csv_path = os.path.join(root_dir, 'network_traffic.csv')
 df = pd.read_csv(csv_path)
 
 # Convert timestamp to datetime
