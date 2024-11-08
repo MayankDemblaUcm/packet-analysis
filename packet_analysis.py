@@ -37,8 +37,10 @@ csv_fields = [
     'protocol', 'packet_size', 'inter_arrival_time', 'payload_size', 'flow_duration',
     'total_packets', 'total_bytes', 'flow_direction', 'session_duration',
     'session_count', 'mean_packet_size', 'variance_packet_size', 'entropy',
-    'access_patterns', 'usage_frequency', 'temporal_patterns',
-    'country', 'region', 'city', 'application_data', 'behavioral_pattern', 'network_context'
+    # 'access_patterns',
+    'usage_frequency', 'temporal_patterns',
+    'country', 'region', 'city',
+    # 'application_data', 'behavioral_pattern', 'network_context'
 ]
 
 # Open CSV file for writing
@@ -151,16 +153,16 @@ with open(csv_file, mode='w', newline='') as file:
             # Session metrics
             session_duration = session_data[flow_key]["end_time"] - session_data[flow_key]["start_time"]
             session_count = len(session_data[flow_key]["packets"])
-            access_patterns = f"{ip_layer.src}->{ip_layer.dst}:{dst_port}"
+           # access_patterns = f"{ip_layer.src}->{ip_layer.dst}:{dst_port}"
             usage_frequency = flow_data[flow_key]["packet_count"] / session_duration if session_duration > 0 else 0
 
             # Get geolocation data
             country, region, city = get_geolocation(ip_layer.dst)
 
             # Dummy application-level data and behavioral analytics
-            application_data = 'Unknown'  # Placeholder for actual application data
-            behavioral_pattern = 'Normal'  # Placeholder for actual behavior pattern analysis
-            network_context = 'Normal'  # Placeholder for network context analysis
+            # application_data = 'Unknown'  # Placeholder for actual application data
+            # behavioral_pattern = 'Normal'  # Placeholder for actual behavior pattern analysis
+            # network_context = 'Normal'  # Placeholder for network context analysis
 
             # Prepare row data for CSV
             row = [
@@ -181,15 +183,15 @@ with open(csv_file, mode='w', newline='') as file:
                 mean_packet_size,
                 variance_packet_size,
                 entropy,
-                access_patterns,
+                # access_patterns,
                 usage_frequency,
                 time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(current_time)),
                 country,
                 region,
                 city,
-                application_data,
-                behavioral_pattern,
-                network_context
+                # application_data,
+                # behavioral_pattern,
+                # network_context
             ]
 
             # Write row data to CSV
@@ -211,7 +213,7 @@ with open(csv_file, mode='w', newline='') as file:
             print(f"Variance of Packet Size: {variance_packet_size}")
             print(f"Entropy: {entropy}")
             print(f"Flow Direction: {flow_direction}")
-            print(f"Access Patterns: {access_patterns}")
+            # print(f"Access Patterns: {access_patterns}")
             print(f"Usage Frequency: {usage_frequency} packets/second")
             print(f"Geolocation: {country}, {region}, {city}")
             print(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(current_time))}\n")
